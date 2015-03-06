@@ -1,7 +1,7 @@
 CC = gcc
 CC_FLAGS = -Wall -Werror
 
-all: libhelpers.so main
+all: libhelpers.so
 
 clean:
 	rm -f *.o
