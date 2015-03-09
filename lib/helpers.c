@@ -10,7 +10,7 @@ ssize_t read_(int fd, void *buf, size_t count) {
 		break;
 	    }
         } else if (rd == 0) {
-            return bytes_read;
+	    break;
         } else {
             bytes_read += rd;
         }
@@ -27,7 +27,7 @@ ssize_t write_(int fd, const void *buf, size_t count) {
 		break;
 	    }
         } else if (wr == 0) {
-            return bytes_written;
+	    break;
         } else {
             bytes_written += wr;
         }
