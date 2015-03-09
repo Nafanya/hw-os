@@ -1,7 +1,11 @@
-CC = gcc
-CC_FLAGS = -Wall -Werror
+CFLAGS = -Wall -Werror
+CXXFLAGS = -Wall -Werror
 
 all: libhelpers.so
+
+debug: CFLAGS += -DDEBUG -g
+debug: CXXFLAGS += -DDEBUG -g
+debug: libhelpers.so
 
 clean:
 	rm -f *.o
@@ -10,9 +14,9 @@ clean:
 
 libhelpers.so: helpers.o
 	$(CC) -shared -o libhelpers.so helpers.o
-	
+
 helpers.o: helpers.c
-	$(CC) $(CC_FLAGS) -c -fpic helpers.c
+	$(CC) $(CFLAGS) -c -fpic helpers.c
 
 main: libhelpers.so
-	$(CC) $(CC_FLAGS) -o main main.c -L. -Wl,-rpath=. -lhelpers
+	$(CC) $(CFLAGS) -o main main.c -L. -Wl,-rpath=. -lhelpers
