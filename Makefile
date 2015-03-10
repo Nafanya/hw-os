@@ -5,3 +5,8 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 .PHONY: all $(SUBDIRS)
+
+clean:
+	$(MAKE) -C $(CURDIR)/lib clean
+	$(MAKE) -C $(CURDIR)/cat clean
+	$(MAKE) -C $(CURDIR)/revwords clean
