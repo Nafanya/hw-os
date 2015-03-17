@@ -1,29 +1,37 @@
 #include "stdlib.h"
 #include "string.h"
+#include "stdio.h"
 
 #include "helpers.h"
 
+const size_t BUF_SIZE = 4096 * 2;
+const char DELIMITER = ' ';
+
 int main() {
-    size_t buf_size = 1024;
-    char *buf = malloc(buf_size);
-    
-    size_t bytes_read;
-    
-    while ((bytes_read = read_(STDIN_FILENO, buf, buf_size)) != -1 && bytes_read != 0) {
-        char *space = strchr(buf, ' ');
-        if (space == NULL) {
-            char* new_buf = realloc(buf, buf_size * 2);
-            if (new_buf == NULL) {
-                free(buf);
-                return 1;
-            }
-            buf = new_buf;
-            buf_size *= 2;
-        } else {
-            
-        }
+    char buf[BUF_SIZE];
+    while (1) {
+	ssize_t bytes_read = read_until(STDIN_FILENO, buf, BUF_SIZE, DELIMITER);
+	if (bytes_read == -1) {
+	    perror("Error while read");
+	    return EXIT_FAILURE;
+	} else if (bytes_read == 0) {
+	    break;
+	}
+	int end = bytes_read;
+	if (buf[end - 1] == DELIMITER) {
+	    end--;
+	}
+	int i;
+	for (i = 0; i < end / 2; i++) {
+	    char t = buf[i];
+	    buf[i] = buf[end - 1 - i];
+	    buf[end - 1 - i] = t;
+	}
+	ssize_t wr = write_(STDOUT_FILENO, buf, (size_t) bytes_read);
+	if (wr == -1) {
+	    perror("Error while write");
+	    return -1;
+	}
     }
-    
-    
     return 0;
 }
