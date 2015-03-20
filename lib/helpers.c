@@ -5,53 +5,47 @@
 
 ssize_t read_(int fd, void *buf, size_t count) {
     size_t bytes_read = 0;
-    ssize_t rd;
-    while (bytes_read < count) {
-	rd = read(fd, (char *)buf + bytes_read, count - bytes_read);
-	if (rd == -1 || rd == 0) {
-	    break;
-	} else {
-	    bytes_read += rd;
-        }
+    while (1) {
+	ssize_t rd = read(fd, (char *)buf + bytes_read, count - bytes_read);
+	if (rd == -1) {
+	    return -1;
+	} else if (rd == 0) {
+	    return bytes_read;
+	}
+	bytes_read += rd;
     }
-    if (rd == -1) {
-	return rd;
-    }
-    return bytes_read;
 }
 
 ssize_t write_(int fd, const void *buf, size_t count) {
     size_t bytes_written = 0;
-    ssize_t wr;
-    while (bytes_written < count) {
-        wr = write(fd, (char *)buf + bytes_written, count - bytes_written);
-        if (wr == -1 || wr == 0) {
-	    break;
-	} else {
-	    bytes_written += wr;
+    while (1) {
+        ssize_t wr = write(fd, (char *)buf + bytes_written, count - bytes_written);
+        if (wr == -1) {
+	    return -1;
+	}
+	bytes_written += wr;
+	if (bytes_written == count) {
+	    return count;
         }
+
     }
-    if (wr == -1) {
-	return wr;
-    }
-    return bytes_written;
 }
 
 ssize_t read_until(int fd, void *buf, size_t count, char delimiter) {
     size_t bytes_read = 0;
-    while (count > 0) {
-	ssize_t rd = read_(fd, (char *)buf + bytes_read, 1);
+    while (1) {
+	ssize_t rd = read(fd, (char *)buf + bytes_read, count - bytes_read);
 	if (rd == -1) {
 	    return -1;
 	} else if (rd == 0) {
-	    break;
+	    return bytes_read;
 	}
-	count--;
-	bytes_read++;
-	char c = *((char *) buf + bytes_read - 1);
-	if (c == delimiter) {
-	    break;
+	int i;
+	for (i = 0; i < rd; i++) {
+	    if (*((char *)buf + bytes_read + i) == delimiter) {
+		return bytes_read + rd;
+	    }
 	}
+	bytes_read += rd;
     }
-    return bytes_read;
 }
