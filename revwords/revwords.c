@@ -1,7 +1,3 @@
-#include "stdlib.h"
-#include "string.h"
-#include "stdio.h"
-
 #include "helpers.h"
 
 const size_t BUF_SIZE = 4096 * 2;
@@ -12,8 +8,7 @@ int main() {
     while (1) {
 	ssize_t bytes_read = read_until(STDIN_FILENO, buf, BUF_SIZE, DELIMITER);
 	if (bytes_read == -1) {
-	    perror("Error while read");
-	    return EXIT_FAILURE;
+	    return 1;
 	} else if (bytes_read == 0) {
 	    break;
 	}
@@ -29,7 +24,6 @@ int main() {
 	}
 	ssize_t wr = write_(STDOUT_FILENO, buf, (size_t) bytes_read);
 	if (wr == -1) {
-	    perror("Error while write");
 	    return -1;
 	}
     }
