@@ -12,9 +12,13 @@ int main() {
 	    break;
 	} else if (bytes_read == -1) {
 	    perror("Error: ");
-	    return 1;
+	    return EXIT_FAILURE;
 	}
-	write_(STDOUT_FILENO, buf, bytes_read);
+	ssize_t wr = write_(STDOUT_FILENO, buf, bytes_read);
+	if (wr == -1) {
+	    perror("Error: ");
+	    return EXIT_FAILURE;
+	}
     }
     return 0;
 }
