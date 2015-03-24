@@ -11,18 +11,18 @@ int main(int argc, char *argv[]) {
     }
 
     char buf[BUF_SIZE];
-
-    char ** args = malloc((argc + 1) * sizeof (char*));
+    char ** args = malloc((argc + 1) * sizeof(char*));
     if (args == NULL) {
         return EXIT_FAILURE;
     }
-    int i;
-    for (i = 1; i < argc; i++) {
-        args[i - 1] = argv[i];
+    size_t i;
+    for (i = 0; i < argc - 1; i++) {
+        args[i] = argv[i + 1];
     }
     args[argc - 1] = buf;
     args[argc] = NULL;
-    char * cmd = argv[0];
+
+    const char* file = args[0];
 
     while (1) {
         ssize_t rd = read_until(STDIN_FILENO, buf, BUF_SIZE, '\n');
@@ -35,12 +35,13 @@ int main(int argc, char *argv[]) {
         }
         if (buf[rd - 1] == '\n') {
             buf[rd - 1] = '\0';
-        }
-        if (spawn(cmd, args) == 0) {
-            printf("%s\n", buf);
         } else {
-            printf("Failed cmd: %s\n", buf);
+            buf[rd] = '\0';
+        }
+        if (spawn(file, args) == 0) {
+            printf("%s\n", buf);
         }
     }
+    free(args);
     return 0;
 }
