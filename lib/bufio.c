@@ -3,6 +3,12 @@
 
 #include "bufio.h"
 
+#ifdef DEBUG
+#define assert_(p) if (!(p)) abort();
+#else
+#define assert_(p)
+#endif
+
 struct buf_t *buf_new(size_t capacity) {
 	buf_t * buf = (buf_t *) malloc(sizeof(buf_t));
 	if (buf == NULL) {
@@ -19,19 +25,25 @@ struct buf_t *buf_new(size_t capacity) {
 }
 
 void buf_free(buf_t * buf) {
+	assert_(buf != NULL);
 	free(buf->data);
 	free(buf);
 }
 
 size_t buf_capacity(buf_t * buf) {
+	assert_(buf != NULL);
 	return buf->capacity;
 }
 
 size_t buf_size(buf_t * buf) {
+	assert_(buf != NULL);
 	return buf->size;
 }
 
 ssize_t buf_fill(fd_t fd, buf_t *buf, size_t required) {
+	assert_(buf != NULL);
+	assert_(buf->size <= required);
+
 	size_t total_read = 0;
 	while (buf->size < required) {
 		ssize_t rd = read(fd, buf->data + total_read, buf->capacity - total_read);
@@ -47,6 +59,8 @@ ssize_t buf_fill(fd_t fd, buf_t *buf, size_t required) {
 }
 
 ssize_t buf_flush(fd_t fd, buf_t *buf, size_t required) {
+	assert_(buf != NULL);
+
 	size_t prev_size = buf->size;
 	while (buf->size > 0 && prev_size - buf->size < required) {
 		ssize_t wr = write(fd, buf->data, buf->size);
