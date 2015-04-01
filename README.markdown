@@ -121,3 +121,73 @@ int res = spawn(&quot;ls&quot;, args);</code></pre>
 <ul>
 <li><code>25 марта, 06:00 (GMT+3)</code></li>
 </ul>
+<h1 id="задание-четвёртое">Задание четвёртое</h1>
+<p>Требуется реализовать аналог буферизированного ввода-вывода из <code>stdio.h</code>, но без аналога типу <code>FILE</code> и с другим интерфесом (и вообще не очень похоже, но ведь со знакомыми ключевыми словами спокойнее).</p>
+<h2 id="первая-часть-2">Первая часть</h2>
+<p>Требуется реализовать динамическую библиотеку содержащую:</p>
+<ul>
+<li><code>struct buf_t {...}</code> — буфер с максимальным размером хранимых данных далее именуемым <code>capacity</code> и заполненный на число байт далее именуемое <code>size</code>.</li>
+<li><code>struct buf_t *buf_new(size_t capacity)</code> — конструктор пустого буфера, возвращает <code>NULL</code> если не удалось сделать <code>malloc</code>,</li>
+<li><code>void buf_free(struct buf_t *)</code> — деструктор.</li>
+<li><code>size_t buf_capacity(buf_t *)</code> — возвращает максимальный возможный размер,</li>
+<li><code>size_t buf_size(buf_t *)</code> — возвращает текущую заполненность,</li>
+<li><p><code>ssize_t buf_fill(fd_t fd, buf_t *buf, size_t required)</code> — заполняет буфер <code>read</code>ами до тех пор пока его <code>size</code> не станет как минимум <code>required</code> байт (если может больше — читает больше) или не наступит EOF. Возвращает:</p>
+<ul>
+<li><code>-1</code> при ошибке, ошибка в <code>errno</code>,</li>
+<li><code>текущий size</code> если не ошибка:
+<ul>
+<li><code>&gt;= required</code> если всё удалось,</li>
+<li><code>&lt; required</code> если рановато наступил EOF.</li>
+</ul></li>
+</ul></li>
+</ul>
+<p>Если в буфере не хватает <code>capacity</code>, то поведение не определено.</p>
+<p>Заметьте, что <code>buf_fill(fd, buf, 1)</code> должно пытаться заполнить весь буфер, а <code>buf_fill(fd, buf, buf_capacity(buf))</code> должно заполнять весь буфер, если это вообще возможно.</p>
+<ul>
+<li><p><code>ssize_t buf_flush(fd_t fd, buf_t *buf, size_t required)</code> — выписывает данные из буфера до тех пор, пока не будет записано как минимум <code>required</code> байт (больше — так больше) или буфер не опустеет. Возвращает:</p>
+<ul>
+<li><code>-1</code> при ошибке, ошибка в <code>errno</code>,</li>
+<li><code>предыдущий size - текущий size</code> если не ошибка:
+<ul>
+<li><code>&gt;= required</code> если всё удалось,</li>
+<li><code>&lt; required</code> если в буфере столько нету.</li>
+</ul></li>
+</ul></li>
+</ul>
+<p>Удачно записанные данные выбрасываются из буфера.</p>
+<p>Заметьте, что <code>buf_flush(fd, buf, 1)</code> должно пытаться записать весь буфер, а <code>buf_flush(fd, buf, buf_size(buf))</code> должно записывать весь буфер если это вообще возможно.</p>
+<p>Все функции имеют неопределённое поведение, когда <code>buf_t *</code> аргумент равен <code>NULL</code>.</p>
+<p>При компиляции с <code>#define DEBUG</code> все неопределённые поведения должны вызывать завершение программы при помощи <code>abort</code>.</p>
+<h3 id="файлы-в-репозитории-6">Файлы в репозитории</h3>
+<ul>
+<li><code>/lib/bufio.h</code></li>
+<li><code>/lib/bufio.c</code></li>
+<li><code>/lib/Makefile</code></li>
+</ul>
+<h3 id="скриптом-сборки-генерируется-6">Скриптом сборки генерируется</h3>
+<ul>
+<li><code>/lib/libbufio.so</code></li>
+</ul>
+<h3 id="hints-2">Hints</h3>
+<ul>
+<li><code>man 2 read</code></li>
+<li><code>man 2 write</code></li>
+</ul>
+<h2 id="вторая-часть-2">Вторая часть</h2>
+<p>Используя <code>libbufio</code> из первой части, реализовать утилиту <code>cat</code>.</p>
+<p>Даже если при чтении из <code>stdin</code> происходит ошибка, <em>все</em> уже прочитанные данные должны быть записаны в <code>stdout</code>, если это вообще возможно.</p>
+<p>Если программа не помещается в 20 строк, то вы делаете что-то серьёзно не так.</p>
+<h3 id="файлы-в-репозитории-7">Файлы в репозитории</h3>
+<ul>
+<li><code>/bufcat/bufcat.c</code></li>
+<li><code>/bufcat/Makefile</code></li>
+</ul>
+<h3 id="скриптом-сборки-генерируется-7">Скриптом сборки генерируется</h3>
+<ul>
+<li><code>/bufcat/bufcat</code></li>
+</ul>
+<h2 id="дедлайн-3">Дедлайн</h2>
+<ul>
+<li><del><code>1 апреля, 06:00 (GMT+3)</code> (и это не шутка)</del></li>
+<li>Какой-то шутник уронил рейн. <code>3 апреля, 06:00 (GMT+3)</code></li>
+</ul>
