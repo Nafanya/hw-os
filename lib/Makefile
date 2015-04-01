@@ -1,16 +1,18 @@
 CFLAGS = -Wall -Werror
 CXXFLAGS = -Wall -Werror
 
-all: libhelpers.so
+all: libhelpers.so libbufio.so
 
 debug: CFLAGS += -DDEBUG -g
 debug: CXXFLAGS += -DDEBUG -g
-debug: libhelpers.so
+debug: libhelpers.so libbufio.so
 
 clean:
 	rm -f *.o
 	rm -f *.so
-	rm -f main
+
+libbufio.so: bufio.o
+	$(CC) -shared -o libbufio.so bufio.o
 
 libhelpers.so: helpers.o
 	$(CC) -shared -o libhelpers.so helpers.o
@@ -18,5 +20,6 @@ libhelpers.so: helpers.o
 helpers.o: helpers.c
 	$(CC) $(CFLAGS) -c -fpic helpers.c
 
-main: libhelpers.so
-	$(CC) $(CFLAGS) -o main main.c -L. -Wl,-rpath=. -lhelpers
+bufio.o: bufio.c
+	$(CC) $(CFLAGS) -c -fpic bufio.c
+
