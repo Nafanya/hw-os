@@ -1,5 +1,5 @@
-CFLAGS = -Wall -Werror
-CXXFLAGS = -Wall -Werror
+CFLAGS = -Wall -Werror -std=c99
+CXXFLAGS = -Wall -Werror -std=c99
 
 all: libhelpers.so libbufio.so
 

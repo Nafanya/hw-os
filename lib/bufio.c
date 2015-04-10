@@ -44,18 +44,16 @@ ssize_t buf_fill(fd_t fd, buf_t *buf, size_t required) {
 	assert_(buf != NULL);
 	assert_(buf->size <= required);
 
-	size_t total_read = 0;
 	while (buf->size < required) {
-		ssize_t rd = read(fd, buf->data + total_read, buf->capacity - total_read);
+		ssize_t rd = read(fd, buf->data + buf->size, buf->capacity - buf->size);
 		if (rd == -1) {
 			return -1;
 		} else if (rd == 0) {
 			break;
 		}
-		total_read += rd;
-		buf->size = total_read;
+		buf->size += rd;
 	}
-	return total_read;
+	return buf->size;
 }
 
 ssize_t buf_flush(fd_t fd, buf_t *buf, size_t required) {
@@ -73,4 +71,34 @@ ssize_t buf_flush(fd_t fd, buf_t *buf, size_t required) {
 		memmove(buf->data, buf->data + wr, buf->size);
 	}
 	return prev_size - buf->size;
+}
+
+ssize_t buf_find_lf(fd_t fd, buf_t *buf, char *dst) {
+	assert_(buf != NULL);
+
+	for (size_t i = 0; i < buf->size; i++) {
+		if (buf->data[i] == '\n') {
+			memcpy(dst, buf->data, i);
+			memmove(buf->data, buf->data + i + 1, buf->size - i - 1);
+			buf->size -= i + 1;
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+ssize_t buf_getline(fd_t fd, buf_t *buf, char *dst) {
+	assert_(buf != NULL);
+
+	ssize_t lf = buf_find_lf(fd, buf, dst);
+	if (lf != -1) {
+		return lf;
+	}
+	buf_fill(fd, buf, 1);
+	lf = buf_find_lf(fd, buf, dst);
+	if (lf != -1) {
+		return lf;
+	}
+	return 0;
 }

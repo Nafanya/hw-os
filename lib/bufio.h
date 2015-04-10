@@ -22,4 +22,6 @@ ssize_t buf_fill(fd_t fd, buf_t *buf, size_t required);
 
 ssize_t buf_flush(fd_t fd, buf_t *buf, size_t required);
 
+ssize_t buf_getline(fd_t fd, buf_t *buf, char *dst);
+
 #endif // __BUFIO_H_
