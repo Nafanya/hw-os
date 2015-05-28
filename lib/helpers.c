@@ -81,3 +81,11 @@ int spawn(const char * file, char * const argv[]) {
         return execvp(file, argv);
     }
 }
+
+int exec(execargs_t* args) {
+  return 0;
+}
+
+int runpiped(execargs_t** programs, size_t n) {
+  return 0;
+}
