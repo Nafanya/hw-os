@@ -28,5 +28,9 @@
 *.x86_64
 *.hex
 
+delwords/
+filter/filter
+filter/input
+
 # Emacs files
 \#*
