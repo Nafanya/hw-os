@@ -1,9 +1,9 @@
-CFLAGS = -Wall -std=c99
+CFLAGS = -Wall -std=c99 -D_POSIX_SOURCE 
 CXXFLAGS = -Wall
 
 all: libhelpers.so libbufio.so
 
-debug: CFLAGS += -DDEBUG -D_POSIX_SOURCE -g
+debug: CFLAGS += -DDEBUG -g
 debug: CXXFLAGS += -DDEBUG -g
 debug: libhelpers.so libbufio.so
 
