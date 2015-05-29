@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Werror -std=c99
+CFLAGS = -Wall -std=gnu99 -D_POSIX_SOURCE
 DEPS_DIR = ../lib
 
 all: libhelpers.so simplesh
@@ -12,5 +12,8 @@ clean:
 libhelpers.so: $(DEPS_DIR)
 	$(MAKE) -C $<
 
-simplesh: libhelpers.so
-	$(CC) $(CFLAGS) -o $@ $@.c -I$(DEPS_DIR) -L$(DEPS_DIR) -Wl,-rpath=$(DEPS_DIR) -lhelpers
+libbufio.so: $(DEPS_DIR)
+	$(MAKE) -C $<
+
+simplesh: libhelpers.so libbufio.so
+	$(CC) $(CFLAGS) -o $@ $@.c -I$(DEPS_DIR) -L$(DEPS_DIR) -Wl,-rpath=$(DEPS_DIR) -lhelpers -lbufio
