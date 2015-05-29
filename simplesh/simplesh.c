@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #include "helpers.h"
 #include "bufio.h"
@@ -52,7 +53,14 @@ execargs_t* parse_prog(char* s) {
   return ret;
 }
 
+void main_sig(int sig) {
+  if (write_(STDOUT_FILENO, "\n$", 2) == -1) {
+    //exit(EXIT_FAILURE);
+  }
+}
+
 int main(int argc, char *argv[]) {
+  signal(SIGINT, main_sig);
   buf_t* buf = buf_new(BUF_SIZE);
   char s[BUF_SIZE];
   while (1) {
