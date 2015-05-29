@@ -3,8 +3,9 @@
 #include <string.h>
 
 #include "helpers.h"
+#include "bufio.h"
 
-const int MAX_SIZE = 8192;
+const int BUF_SIZE = 8192;
 
 void test() {
   char* argv1[] = {"find", "/", NULL};
@@ -23,38 +24,60 @@ void test() {
   printf("DONE!\n");
 }
 
-int main(int argc, char *argv[]) {
-  char buf[MAX_SIZE];
-  size_t has = 0;
-  ssize_t rd;
-  while (1) {
-    if (rd = write_(STDOUT_FILENO, "$", 1) == -1) {
-      return EXIT_FAILURE;
-    }
-    if ((rd = read_(STDIN_FILENO, buf, buf + has, MAX_SIZE - has)) == -1) {
-      return EXIT_FAILURE;
-    }
-    int pipes = 1;
-    int lf = -1;
-    for (int i = 0; i < has + rd; i++) {
-      if (buf[i] == '|') {
-        pipes++;
-      } else if (buf[i] == '\n') {
-        lf = i;
-        buf[i] = '\0';
-        break;
-      }
-    }
-    execargs_t** progs = malloc(sizeof(execargs_t) * pipes);
-    char* tok_prog = strtok(buf, "|");
-    while (tok_prog != NULL) {
-      int argcnt = 0;
-      char** args = malloc(sizeof(char*));
-      char* tok_arg = strtok(tok_prog, " ");
-      while (tok_arg != NULL) {
-        
-      }
-    }
+void prompt() {
+  if (write_(STDOUT_FILENO, "$", 1) == -1) {
+    exit(EXIT_FAILURE);
   }
-  return 0;
+}
+
+execargs_t* parse_prog(char* s) {
+  int arg_cnt = 2;
+  for (char* c = s; *c; c++) {
+    arg_cnt += *c == ' ';
+  }
+  char** args = malloc(sizeof(char*) * arg_cnt);
+  args[arg_cnt - 1] = NULL;
+  execargs_t* ret = malloc(sizeof(execargs_t));
+
+  char* end_str;
+  char* tok = strtok_r(s, " ", &end_str);
+  int index = 0;
+  while (tok != NULL) {
+    args[index++] = strdup(tok);
+    //printf("arg #%d: %s\n", index - 1, tok);
+    tok = strtok_r(NULL, " ", &end_str);
+  }
+  ret->prog = args[0];
+  ret->args = args;
+  return ret;
+}
+
+int main(int argc, char *argv[]) {
+  buf_t* buf = buf_new(BUF_SIZE);
+  char s[BUF_SIZE];
+  while (1) {
+    prompt();
+    ssize_t lf = buf_getline(STDIN_FILENO, buf, s);
+    if (lf == -1) {
+      return EXIT_FAILURE;
+    } else if (lf == 0) {
+      return EXIT_SUCCESS;
+    }
+    int prog_cnt = 1;
+    for (size_t i = 0; i < lf; i++) {
+      if (s[i] == '|') {
+        prog_cnt++;
+      }
+    }
+    execargs_t* progs[prog_cnt];
+    char* end_str;
+    char* tok = strtok_r(s, "|", &end_str);
+    int index = 0;
+    while (tok != NULL) {
+      progs[index++] = parse_prog(tok);
+      tok = strtok_r(NULL, "|", &end_str);
+    }
+    runpiped(progs, prog_cnt);
+  }
+  return EXIT_SUCCESS;
 }
