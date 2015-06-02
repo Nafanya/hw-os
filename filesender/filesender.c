@@ -1,31 +1,70 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netdb.h>
 
 #include <stdio.h>
 
 #include "helpers.h"
 #include "bufio.h"
 
-#define CHK(_retcode, _msg)                     \
-  if (_retcode == -1) {                         \
-    perror(_msg);                               \
-    return EXIT_FAILURE;                        \
+#define CHK(_cond, ...)                             \
+  if (!(_cond)) {                                   \
+    perror(NULL);                                   \
+    fprintf(stderr, __VA_ARGS__);                   \
+    exit(EXIT_FAILURE);                             \
   }
+
+int create_bind_sock(char* port) {
+  struct addrinfo hints;
+  struct addrinfo *addresses, *rp;
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+
+  int sfd, s;
+  s = getaddrinfo("localhost", port, &hints, &addresses);
+  CHK(s != 1, "getaddrinfo: %s\n", gai_strerror(s));
+  for (rp = addresses; rp != NULL; rp = rp->ai_next) {
+    sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (sfd == -1) {
+      continue;
+    }
+    int one = 1;
+    s = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int));
+    if (s == -1) {
+      continue;
+    }
+    if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0) {
+      break;
+    }
+    close(sfd);
+  }
+  if (rp == NULL) {
+    return -1;
+  }
+  freeaddrinfo(addresses);
+  return sfd;
+}
 
 int send_file(int from, int to) {
   static const int BUF_SIZE = 4096;
-
   buf_t* buf = buf_new(BUF_SIZE);
   if (buf == NULL) return -1;
   for (;;) {
     ssize_t rd = buf_fill(from, buf, BUF_SIZE);
     if (rd == -1) {
+      buf_free(buf);
       return -1;
     } else if (rd == 0) {
+      buf_free(buf);
       return 0;
     }
     ssize_t wr = buf_flush(to, buf, rd);
@@ -37,47 +76,27 @@ int send_file(int from, int to) {
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
-    write_(STDOUT_FILENO, "filesender PORT FILENAME\n", 25);
+    fprintf(stderr, "filesender PORT FILENAME\n");
     return EXIT_FAILURE;
   }
-  int port;
-  if (sscanf(argv[1], "%d", &port) != 1) {
-    write_(STDOUT_FILENO, "bad port\n", 9);
-    return EXIT_FAILURE;
-  }
-  char* filename = argv[2];
-  printf("port: %d\nfile: %s\n", port, filename);
+  int sock = create_bind_sock(argv[1]);
+  CHK(sock != -1, "Can't create socket");
+  CHK(listen(sock, 128) != -1, "Can't listen socket");
 
-  int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  CHK(sock, "socket");
-
-  const int one = 1;
-  CHK(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int)), "sockopt");
-  struct sockaddr_in addr = {
-    .sin_family = AF_INET,
-    .sin_port = htons(port),
-    .sin_addr = {.s_addr = INADDR_ANY}
-  };
-  CHK(bind(sock, (struct sockaddr*)&addr, sizeof(addr)), "bind");
-  CHK(listen(sock, 1), "listen");
-
-  struct sockaddr_in client;
-  socklen_t sz = sizeof(client);
-
-  printf("Start loop\n");
   for (;;) {
-    int fd = accept(sock, (struct sockaddr*)&client, &sz);
-    printf("accept fd: %d\n", fd);
-    printf("from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
-    CHK(fd, "accept");
+    struct sockaddr client;
+    socklen_t sz = sizeof(client);
+    int fd = accept(sock, &client, &sz);
+    CHK(fd != -1, "Can't accept new connection");
+
     pid_t pid = fork();
-    CHK(pid, "fork");
-    if (pid == 0) {
+    if (pid == -1) {
+      close(fd);
+      return EXIT_FAILURE;
+    } else if (pid == 0) {
       close(sock);
-      //sleep(5);
-      int file = open(filename, O_RDONLY);
-      CHK(file, "open file");
-      CHK(send_file(file, fd), "send file");
+      int file = open(argv[2], O_RDONLY);
+      send_file(file, fd);
       close(file);
       close(fd);
       return EXIT_SUCCESS;
