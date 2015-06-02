@@ -18,24 +18,19 @@
 
 int send_file(int from, int to) {
   static const int BUF_SIZE = 4096;
-  const char buf[BUF_SIZE];
 
+  buf_t* buf = buf_new(BUF_SIZE);
+  if (buf == NULL) return -1;
   for (;;) {
-    int rd = read_(from, (char*)buf, BUF_SIZE);
+    ssize_t rd = buf_fill(from, buf, BUF_SIZE);
     if (rd == -1) {
       return -1;
     } else if (rd == 0) {
       return 0;
-    } else {
-      int cnt = 0;
-      while (cnt < rd) {
-        int wr = write_(to, (char*)(buf) + cnt, rd - cnt);
-        if (wr == -1) {
-          return -1;
-        } else {
-          cnt += wr;
-        }
-      }
+    }
+    ssize_t wr = buf_flush(to, buf, rd);
+    if (wr == -1) {
+      return -1;
     }
   }
 }
@@ -79,7 +74,7 @@ int main(int argc, char* argv[]) {
     CHK(pid, "fork");
     if (pid == 0) {
       close(sock);
-      sleep(5);
+      //sleep(5);
       int file = open(filename, O_RDONLY);
       CHK(file, "open file");
       CHK(send_file(file, fd), "send file");
