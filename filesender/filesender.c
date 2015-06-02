@@ -54,24 +54,21 @@ int create_bind_sock(char* port) {
   return sfd;
 }
 
-int send_file(int from, int to) {
+void send_file(int from, int to) {
   static const int BUF_SIZE = 4096;
   buf_t* buf = buf_new(BUF_SIZE);
-  if (buf == NULL) return -1;
+  CHK(buf != NULL, "malloc failed");
   for (;;) {
-    ssize_t rd = buf_fill(from, buf, BUF_SIZE);
-    if (rd == -1) {
-      buf_free(buf);
-      return -1;
-    } else if (rd == 0) {
-      buf_free(buf);
-      return 0;
+    ssize_t rd = buf_fill(from, buf, 1);
+    if (rd == -1 || rd == 0) {
+      break;
     }
-    ssize_t wr = buf_flush(to, buf, rd);
+    ssize_t wr = buf_flush(to, buf, buf_size(buf));
     if (wr == -1) {
-      return -1;
+      break;
     }
   }
+  buf_free(buf);
 }
 
 int main(int argc, char* argv[]) {
