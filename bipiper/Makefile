@@ -8,6 +8,7 @@ debug: all
 
 clean:
 	rm -f forking
+	rm -f *.o
 
 libhelpers.so: $(DEPS_DIR)
 	$(MAKE) -C $<
@@ -20,3 +21,5 @@ forking: forking.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@ -I$(DEPS_DIR)
+
+.PHONY: clean
