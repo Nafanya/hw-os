@@ -1,4 +1,4 @@
-SUBDIRS = lib cat revwords bufcat filter simplesh filesender forking
+SUBDIRS = lib cat revwords bufcat filter simplesh filesender forking polling
 
 all: $(SUBDIRS)
 $(SUBDIRS):
