@@ -89,10 +89,11 @@ int main(int argc, char* argv[]) {
   fds[0].fd = srv[0];
   fds[1].fd = srv[1];
   fds[0].events = POLLIN;
-  fds[1].events = POLLIN;
+  fds[1].events = 0;
 
   int flags[N];
   memset(flags, 0, sizeof(int) * N);
+  int state = 0, waiting;
 
   for (;;) {
     int polls = poll(fds, nfds, -1);
@@ -102,13 +103,43 @@ int main(int argc, char* argv[]) {
       else continue;
     }
     int oldnfds = nfds;
+    if (state == 0 && (fds[0].revents & POLLIN)) {
+      if (nfds + 2 <= 2*MAX_PAIRS) {
+        printf("accept on 1st\n");
+        int fd = accept(srv[0], NULL, NULL);
+        fds[nfds].fd = fd;
+        fds[nfds].events = POLLIN;
+        flags[nfds] = 0;
+        bufs[nfds/2][0]->size = bufs[nfds/2][1]->size = 0;
+        nfds++;
+        fds[0].events = 0;
+        fds[1].events = POLLIN;
+        state = 1;
+      } else {
+        fds[0].events = 0;
+      }
+    } else if (state == 1 && (fds[1].revents & POLLIN)) {
+      if (nfds + 1 <= 2*MAX_PAIRS) {
+        printf("accept on 2nd\n");
+        int fd = accept(srv[1], NULL, NULL);
+        fds[nfds].fd = fd;
+        fds[nfds].events = POLLIN;
+        flags[nfds] = 0;
+        nfds++;
+        fds[1].events = 0;
+        fds[0].events = POLLIN;
+        state = 0;
+      } else {
+        fds[1].events = 0;
+      }
+    }
+    /*
     if ((fds[0].revents & POLLIN) && (fds[1].events & POLLIN)) {
       if (nfds + 2 > N) continue;
       int fd = accept(srv[0], NULL, NULL);
       fds[nfds].fd = fd;
       fds[nfds].events = POLLIN;
       flags[nfds] = 0;
-      bufs[nfds/2][0]->size = bufs[nfds/2][1]->size = 0;
       nfds++;
       fd = accept(srv[1], NULL, NULL);
       fds[nfds].fd = fd;
@@ -116,23 +147,36 @@ int main(int argc, char* argv[]) {
       flags[nfds] = 0;
       nfds++;
       printf("accept\n");
-    }
+    }*/
     for (int i = 2; i < oldnfds; i++) {
       int ind = i/2-1, dir = i % 2;
       if (fds[i].revents & POLLIN) {
-        printf("POLLIN on %d\n", i);
+        printf("POLLIN fds[%2d]\n", i);
         if (buf_fill_once(fds[i].fd, bufs[ind][dir]) <= 0) {
           shutdown(fds[i].fd, SHUT_RD);
           flags[i] |= 1;
           flags[i ^ 1] |= 2;
         }
-      } else if (fds[i].revents & POLLOUT) {
-        printf("POLLOUT on %d\n", i);
+      }
+      if (fds[i].revents & POLLOUT) {
+        printf("POLLOUT fds[%2d]\n", i);
         if (buf_flush(fds[i].fd, bufs[ind][dir ^ 1], buf_size(bufs[ind][dir ^ 1])) <= 0) {
           shutdown(fds[i].fd, SHUT_WR);
           flags[i] |= 2;
           flags[i ^ 1] |= 1;
         }
+      }
+      if (fds[i].revents & POLLHUP) {
+        printf("POLLHUP fds[%2d]\n", i);
+        close(fds[i].fd);
+        close(fds[i ^ 1].fd);
+        fds[i] = fds[nfds - 2];
+        fds[i ^ 1] = fds[nfds - 1];
+        flags[i] = flags[nfds - 2];
+        flags[i ^ 1] = flags[nfds - 1];
+        buf_t *bf = bufs[(i-2)/2][0]; bufs[(i-2)/2][0] = bufs[(nfds-3)/2][0]; bufs[(nfds-3)/2][0] = bf;
+               bf = bufs[(i-2)/2][1]; bufs[(i-2)/2][1] = bufs[(nfds-3)/2][1]; bufs[(nfds-3)/2][1] = bf;
+        nfds -= 2;
       }
     }
     for (int i = oldnfds/2-1; i >= 0; i--) {
@@ -152,8 +196,10 @@ int main(int argc, char* argv[]) {
         flags[i] = flags[nfds - 2];
         flags[i + 1] = flags[nfds - 1];
         buf_t *bf = bufs[(i-2)/2][0]; bufs[(i-2)/2][0] = bufs[(nfds-3)/2][0]; bufs[(nfds-3)/2][0] = bf;
-               bf = bufs[(i-2)/2][1]; bufs[(i-2)/2][1] = bufs[(nfds-3)/2][1]; bufs[(nfds-3)/2][1] = bf;
+                bf = bufs[(i-2)/2][1]; bufs[(i-2)/2][1] = bufs[(nfds-3)/2][1]; bufs[(nfds-3)/2][1] = bf;
         nfds -= 2;
+        fds[state].events = POLLIN;
+        fds[state ^ 1].events = 0;
       }
     }
   }
