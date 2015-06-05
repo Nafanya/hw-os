@@ -102,3 +102,16 @@ ssize_t buf_getline(fd_t fd, buf_t *buf, char *dst) {
 	}
 	return 0;
 }
+
+ssize_t buf_fill_once(fd_t fd, buf_t *buf) {
+	assert_(buf != NULL);
+
+	if (buf->size < buf->capacity) {
+		ssize_t rd = read(fd, buf->data + buf->size, buf->capacity - buf->size);
+		if (rd == -1) {
+			return -1;
+		}
+		buf->size += rd;
+	}
+	return buf->size;
+}
