@@ -89,11 +89,10 @@ int main(int argc, char* argv[]) {
   fds[0].fd = srv[0];
   fds[1].fd = srv[1];
   fds[0].events = POLLIN;
-  fds[1].events = 0;
+  fds[1].events = POLLIN;
 
   int flags[N];
   memset(flags, 0, sizeof(int) * N);
-  int waiting = -1;
 
   for (;;) {
     int polls = poll(fds, nfds, -1);
@@ -103,7 +102,7 @@ int main(int argc, char* argv[]) {
       else continue;
     }
     int oldnfds = nfds;
-    if ((fds[0].revents & POLLIN) || (fds[1].events & POLLIN)) {
+    if ((fds[0].revents & POLLIN) && (fds[1].events & POLLIN)) {
       if (nfds + 2 > N) continue;
       int fd = accept(srv[0], NULL, NULL);
       fds[nfds].fd = fd;
@@ -141,8 +140,8 @@ int main(int argc, char* argv[]) {
       if (buf_size(bufs[i][0]) < buf_capacity(bufs[i][0]) && (flags[2*i+2] & 1) == 0) fds[2*i+2].events |= POLLIN;
       if (buf_size(bufs[i][0])                            && (flags[2*i+3] & 2) == 0) fds[2*i+3].events |= POLLOUT;
 
-      if (buf_size(bufs[i][1]) < buf_capacity(bufs[i][1]) && (flags[2*i+3] & 1) == 0) fds[2*i+2].events |= POLLIN;
-      if (buf_size(bufs[i][1])                            && (flags[2*i+2] & 2) == 0) fds[2*i+3].events |= POLLOUT;
+      if (buf_size(bufs[i][1]) < buf_capacity(bufs[i][1]) && (flags[2*i+3] & 1) == 0) fds[2*i+3].events |= POLLIN;
+      if (buf_size(bufs[i][1])                            && (flags[2*i+2] & 2) == 0) fds[2*i+2].events |= POLLOUT;
     }
     for (int i = 2; i < nfds; i += 2) {
       if (flags[i] == 3 || flags[i + 1] == 3 || (flags[i] == flags[i + 1] && (flags[i] == 1 || flags[i] == 2))) {
@@ -153,7 +152,7 @@ int main(int argc, char* argv[]) {
         flags[i] = flags[nfds - 2];
         flags[i + 1] = flags[nfds - 1];
         buf_t *bf = bufs[(i-2)/2][0]; bufs[(i-2)/2][0] = bufs[(nfds-3)/2][0]; bufs[(nfds-3)/2][0] = bf;
-        bf = bufs[(i-2)/2][1]; bufs[(i-2)/2][1] = bufs[(nfds-3)/2][1]; bufs[(nfds-3)/2][1] = bf;
+               bf = bufs[(i-2)/2][1]; bufs[(i-2)/2][1] = bufs[(nfds-3)/2][1]; bufs[(nfds-3)/2][1] = bf;
         nfds -= 2;
       }
     }
