@@ -20,6 +20,11 @@
 #define PERR(msg) { perror(msg); exit(EXIT_FAILURE); }
 #define EXT(...) { fprintf(stderr, __VA_ARGS__); exit(EXIT_FAILURE); }
 
+#define NT 0
+#define RD 1
+#define WR 2
+#define RW 3
+
 typedef struct pollfd pollfd;
 
 const int MAX_PAIRS = 127;
@@ -31,11 +36,11 @@ int create_bind_sock(char* port) {
   struct addrinfo *addresses, *rp;
 
   memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
+  hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
   int sfd, s;
-  s = getaddrinfo("localhost", port, &hints, &addresses);
+  s = getaddrinfo("0.0.0.0", port, &hints, &addresses);
   if (s == -1) EXT("getaddrinfo: %s\n", gai_strerror(s));
   for (rp = addresses; rp != NULL; rp = rp->ai_next) {
     sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
@@ -118,7 +123,8 @@ int main(int argc, char* argv[]) {
       } else {
         fds[0].events = 0;
       }
-    } else if (state == 1 && (fds[1].revents & POLLIN)) {
+    }
+    if (state == 1 && (fds[1].revents & POLLIN)) {
       if (nfds + 1 <= 2*MAX_PAIRS) {
         printf("accept on 2nd\n");
         int fd = accept(srv[1], NULL, NULL);
@@ -133,41 +139,27 @@ int main(int argc, char* argv[]) {
         fds[1].events = 0;
       }
     }
-    /*
-    if ((fds[0].revents & POLLIN) && (fds[1].events & POLLIN)) {
-      if (nfds + 2 > N) continue;
-      int fd = accept(srv[0], NULL, NULL);
-      fds[nfds].fd = fd;
-      fds[nfds].events = POLLIN;
-      flags[nfds] = 0;
-      nfds++;
-      fd = accept(srv[1], NULL, NULL);
-      fds[nfds].fd = fd;
-      fds[nfds].events = POLLIN;
-      flags[nfds] = 0;
-      nfds++;
-      printf("accept\n");
-    }*/
     for (int i = 2; i < oldnfds; i++) {
       int ind = i/2-1, dir = i % 2;
       if (fds[i].revents & POLLIN) {
         printf("POLLIN fds[%2d]\n", i);
         if (buf_fill_once(fds[i].fd, bufs[ind][dir]) <= 0) {
           shutdown(fds[i].fd, SHUT_RD);
-          flags[i] |= 1;
-          flags[i ^ 1] |= 2;
+          flags[i] |= RD;
+          flags[i ^ 1] |= WR;
         }
       }
       if (fds[i].revents & POLLOUT) {
         printf("POLLOUT fds[%2d]\n", i);
         if (buf_flush(fds[i].fd, bufs[ind][dir ^ 1], buf_size(bufs[ind][dir ^ 1])) <= 0) {
           shutdown(fds[i].fd, SHUT_WR);
-          flags[i] |= 2;
-          flags[i ^ 1] |= 1;
+          flags[i] |= WR;
+          flags[i ^ 1] |= RD;
         }
       }
       if (fds[i].revents & POLLHUP) {
         printf("POLLHUP fds[%2d]\n", i);
+        //fds[i].events = 0;
         close(fds[i].fd);
         close(fds[i ^ 1].fd);
         fds[i] = fds[nfds - 2];
@@ -181,14 +173,14 @@ int main(int argc, char* argv[]) {
     }
     for (int i = oldnfds/2-1; i >= 0; i--) {
       fds[2*i+2].events = fds[2*i+3].events = 0;
-      if (buf_size(bufs[i][0]) < buf_capacity(bufs[i][0]) && (flags[2*i+2] & 1) == 0) fds[2*i+2].events |= POLLIN;
-      if (buf_size(bufs[i][0])                            && (flags[2*i+3] & 2) == 0) fds[2*i+3].events |= POLLOUT;
+      if (buf_size(bufs[i][0]) < buf_capacity(bufs[i][0]) && (flags[2*i+2] & RD) == 0) fds[2*i+2].events |= POLLIN;
+      if (buf_size(bufs[i][0])                            && (flags[2*i+3] & WR) == 0) fds[2*i+3].events |= POLLOUT;
 
-      if (buf_size(bufs[i][1]) < buf_capacity(bufs[i][1]) && (flags[2*i+3] & 1) == 0) fds[2*i+3].events |= POLLIN;
-      if (buf_size(bufs[i][1])                            && (flags[2*i+2] & 2) == 0) fds[2*i+2].events |= POLLOUT;
+      if (buf_size(bufs[i][1]) < buf_capacity(bufs[i][1]) && (flags[2*i+3] & RD) == 0) fds[2*i+3].events |= POLLIN;
+      if (buf_size(bufs[i][1])                            && (flags[2*i+2] & WR) == 0) fds[2*i+2].events |= POLLOUT;
     }
     for (int i = 2; i < nfds; i += 2) {
-      if (flags[i] == 3 || flags[i + 1] == 3 || (flags[i] == flags[i + 1] && (flags[i] == 1 || flags[i] == 2))) {
+      if (flags[i] == RW || flags[i + 1] == RW || (flags[i] == flags[i + 1] && (flags[i] == RD || flags[i] == WR))) {
         close(fds[i].fd);
         close(fds[i + 1].fd);
         fds[i] = fds[nfds - 2];
@@ -196,7 +188,7 @@ int main(int argc, char* argv[]) {
         flags[i] = flags[nfds - 2];
         flags[i + 1] = flags[nfds - 1];
         buf_t *bf = bufs[(i-2)/2][0]; bufs[(i-2)/2][0] = bufs[(nfds-3)/2][0]; bufs[(nfds-3)/2][0] = bf;
-                bf = bufs[(i-2)/2][1]; bufs[(i-2)/2][1] = bufs[(nfds-3)/2][1]; bufs[(nfds-3)/2][1] = bf;
+               bf = bufs[(i-2)/2][1]; bufs[(i-2)/2][1] = bufs[(nfds-3)/2][1]; bufs[(nfds-3)/2][1] = bf;
         nfds -= 2;
         fds[state].events = POLLIN;
         fds[state ^ 1].events = 0;
