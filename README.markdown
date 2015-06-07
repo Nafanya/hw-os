@@ -301,7 +301,8 @@ $&lt;Ctrl+D приводит к завершению работы&gt;</code></pr
 </ul>
 <h3 id="ещё-больше-подсказок">Ещё больше подсказок</h3>
 <p>Пример работы с TCP без getaddrinfo. Сервер, который ждёт подключения на порту TCPv4 номер 1234 и немножко разговаривает с тем, кто подключился.</p>
-<pre><code>#include &lt;unistd.h&gt;
+```c
+#include &lt;unistd.h&gt;
 #include &lt;sys/types.h&gt;
 #include &lt;sys/socket.h&gt;
 #include &lt;netinet/ip.h&gt;
@@ -341,7 +342,8 @@ int main()
   reply[r] = 0;
   printf(&quot;reply: %s\n&quot;, reply);
   return 0;
-}</code></pre>
+}
+```
 <h3 id="пример-работы-2">Пример работы</h3>
 <pre><code>|-------------------------------+----------------------------------|
 | $ cat hello.txt               |                                  |
