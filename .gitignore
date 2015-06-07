@@ -31,6 +31,12 @@
 delwords/
 filter/filter
 filter/input
+bipiper/forking
+bipiper/polling
+filesender/filesender
+revwords/revwords
+simplesh/input
+simplesh/simplesh
 
 # Emacs files
 \#*
