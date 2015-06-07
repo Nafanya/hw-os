@@ -1,17 +1,22 @@
 CFLAGS = -Wall -Werror
 DEPS_DIR = ../lib
 
-all: libbufcat.so bufcat
+all: libbufio.so bufcat
 
 debug: CFLAGS += -DDEBUG -g
 debug: all
 
 clean:
-	$(MAKE) -C $(DEPS_DIR) clean
 	rm -f bufcat
+	rm *.o
 
-libbufcat.so: $(DEPS_DIR)
+libbufio.so: $(DEPS_DIR)
 	$(MAKE) -C $<
 
-bufcat: libbufcat.so bufcat.c
-	$(CC) $(CFLAGS) -o $@ $@.c -I$(DEPS_DIR) -L$(DEPS_DIR) -Wl,-rpath=$(DEPS_DIR) -lbufio
+bufcat: bufcat.o
+	$(CC) $(CFLAGS) $^ -o $@ -I$(DEPS_DIR) -L$(DEPS_DIR) -Wl,-rpath=$(DEPS_DIR) -lbufio
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $^ -o $@ -I$(DEPS_DIR)
+
+.PHONY: clean
