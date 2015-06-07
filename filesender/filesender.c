@@ -30,7 +30,7 @@ int create_bind_sock(char* port) {
   hints.ai_socktype = SOCK_STREAM;
 
   int sfd, s;
-  s = getaddrinfo("localhost", port, &hints, &addresses);
+  s = getaddrinfo("0.0.0.0", port, &hints, &addresses);
   CHK(s != 1, "getaddrinfo: %s\n", gai_strerror(s));
   for (rp = addresses; rp != NULL; rp = rp->ai_next) {
     sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
